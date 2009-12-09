@@ -1,0 +1,161 @@
+Tracks
+======
+
+Position and orientation tracks be defined between objects that implement 
+``miru.imiru.IPostional`` [#]_ . 
+
+.. contents::
+    :local:
+
+
+Overview
+--------
+
+A track defines *master-slave*
+relationship between two objects on either the objects position or attribute.
+In Miru's terminology the master is called to as the *tracked*  and the
+slave is called the *tracker*.  When a track is defined over a tracker **S** and
+a tracked **T** the position or angle of **S** is always changed relative to
+**T**.  Thus, if a positional track is defined between **S** and **T** where **S** begins
+at `(x,y,z)` and **T** begins at `(u,v,w)`, if **S** moves to position `(x2,y2,z2)`, then
+**T** is implicitly translated to position `(u + (x2-x), v + (y2-y), w + (z2-z))`.
+Confused? Good let's move on to the next section.
+
+
+Positional Tracks
+-----------------
+
+Here is a concrete example of this:
+
+.. code-block:: python
+    
+    from miru.track import PosTrack
+    leg = loadObj('leg.obj')
+    foot = loadObj('foot.obj')
+    foot.pos -= (0,2,0)
+    track = PosTrack(foot, leg) # Set up the Positional Track
+
+Notice now that as the leg moves, the foot moves along with it:
+
+.. code-block:: pycon
+
+    >>> tuple(leg.pos)
+    (0, 0, 0)
+    >>> tuple(foot.pos)
+    (0, -2, 0)
+    >>> leg.pos += (1,2,3)
+    >>> tuple(leg.pos)
+    (1, 2, 3)
+    >>> tuple(foot.pos)
+    (1, 0, 3)
+
+The tracker-tracked relationship is also one-to-many, so we can create other
+tracks on the leg:
+
+.. code-block:: python
+
+   knee = loadObj('knee.obj')
+   knee.pos = leg.pos - (0,1,0)
+   track2 = PosTrack(knee, leg)
+
+
+Camera Tracks
+-------------
+
+Tracks, can also be used to make a camera follow an object in the world, which can
+be very usefule for games.  You can define a PosTrack as defined above or even
+use a custom side-scroller track which will only follow the tracked object as
+it reaches the screen boundary:
+
+.. code-block:: python
+
+    from miru.track import SSCameraTrack
+    avatar = loadObj('avatar.obj')
+    SSCameraTrack(env.camera, avatar, env.window)
+    
+You can also compose tracks.  With a slight modification to the above code example
+we can make our camera also follow the avatar along the z-axis:
+
+.. code-block:: python
+
+    from miru.track import SSCameraTrack
+    avatar = loadObj('avatar.obj')
+    SSCameraTrack(env.camera, avatar, env.window)
+    PosTrack(env.camera, avatar, axes=(0,0,1))
+
+
+.. figure:: sstrack.png
+    :alt: Side Scroller Track
+
+    The camera allows the ball to move freely in the scene and then follow it
+    as it reaches the edge of the viewport.
+
+.. CAUTION::
+
+    Do not be confused by the ``track_target`` attribute of ``miru.camera.Camera``.  While
+    similar in concept (and in terminology) - ``track_target`` does not use a Track.
+    Expect wacky things to occur (for now), if you set ``track_target``
+    on a camera and also set up tracks as described in this section.
+
+
+Registration
+------------
+
+Tracks are registered globally on both the tracker and the tracked.  To get a list
+of tracks setup for Avatar as a tracked object:
+
+.. code-block:: pycon
+
+    >>> from miru.track import gettracks
+    >>> gettracks(tracked=avatar)
+    [...]
+
+We can call also find out what we're tracking:
+
+.. code-block:: pycon
+
+    >>> gettracks(tracker=env.camera)
+    [...]
+
+
+Deactivation
+------------
+
+Tracks can also be deactivated (or disabled).  To disable a single track:
+
+.. code-block:: pycon
+
+    >>> track.deactivate()
+    >>> leg.pos += (123,45,67)
+    >>> foot.pos
+    (1,0,3)
+
+Now our foot no longer follows the leg.  We can also disable all tracks on a
+tracked object:
+
+   
+.. code-block:: pycon
+
+    >>> from miru.track import deactivate
+    >>> deactivate(tracked=avatar)
+    >>> gettracks(tracked=avatar)
+    []
+
+Likewise, we an deactivate all tracks with a given tracker.
+
+.. code-block:: pycon
+
+    >>> deactivate(tracker=env.camera)
+    >>> gettracks(tracker=env.camera)
+    []
+
+.. CAUTION::
+    
+    Don't try to go overboard with tracks.  If you define more than 10 trackers an
+    object, you should start to worry.  Tracking is a granular operation that isn't
+    by any means optimized - it currently entails at least **N** function calls for 
+    **N** trackers. 
+
+
+
+

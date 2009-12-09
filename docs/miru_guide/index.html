@@ -1,0 +1,793 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.4: http://docutils.sourceforge.net/" />
+<title>Introduction to Miru</title>
+<link rel="stylesheet" href="miru.css" type="text/css" />
+</head>
+<body>
+<div class="document" id="introduction-to-miru">
+<h1 class="title">Introduction to Miru</h1>
+<p>Miru provides camera, lighting, render state grouping and various
+other abstractions which facilitate the task of rendering
+objects in an OpenGL context.  It is tightly integrated with first pyglet
+(more specifically <tt class="docutils literal"><span class="pre">pyglet.window</span></tt>, <tt class="docutils literal"><span class="pre">pyglet.gl</span></tt> and <tt class="docutils literal"><span class="pre">pyglet.font</span></tt> modules),
+which provides a portable (Linux, Mac OSX, and Windows) and raw interface to the OpenGL
+GL and GLU libraries via <tt class="docutils literal"><span class="pre">ctypes</span></tt>, secondly zope.interface which provides the building
+blocks for a component architecture that make several features of the
+library easy to implement, and lastly Twisted, which, via
+<tt class="docutils literal"><span class="pre">twisted.python.components</span></tt>, provides a component registry on top of
+zope.interface.</p>
+<p>Miru might be useful if you are daunted by OpenGL and want to write a 3D
+application.  I am almost 68.73% confident that there is a 2 out of 3 chance that
+Miru will help you in a small (but core) subset of relevant
+tasks without requiring more than a beginner's understading of OpenGL.</p>
+<p><strong>NB 1:</strong>: Miru is <em>pre-alpha</em>.  I will make no promises on its stability.
+Use at your own risk.  If you find any bugs, I'd like to know - and patches
+are ideal of course if it is a real bug versus a feature you haven't appreciated
+yet.  You can email me directly or communicate over the pyglet mailing list -
+Miru is essentially a pyglet application.</p>
+<p><strong>NB 2:</strong> Miru is implemented in the Python programming language and
+is intended for use in Python-based applications.</p>
+<div class="contents topic">
+<p class="topic-title first"><a id="contents" name="contents">Contents</a></p>
+<ul class="auto-toc simple">
+<li><a class="reference" href="#installation" id="id8" name="id8">1&nbsp;&nbsp;&nbsp;Installation</a></li>
+<li><a class="reference" href="#quick-start" id="id9" name="id9">2&nbsp;&nbsp;&nbsp;Quick Start</a></li>
+<li><a class="reference" href="#interfaces" id="id10" name="id10">3&nbsp;&nbsp;&nbsp;Interfaces</a></li>
+<li><a class="reference" href="#the-environment-singleton" id="id11" name="id11">4&nbsp;&nbsp;&nbsp;The Environment Singleton</a><ul class="auto-toc">
+<li><a class="reference" href="#objects-and-drawables" id="id12" name="id12">4.1&nbsp;&nbsp;&nbsp;Objects and Drawables</a><ul class="auto-toc">
+<li><a class="reference" href="#newobject" id="id13" name="id13">4.1.1&nbsp;&nbsp;&nbsp;newObject</a></li>
+<li><a class="reference" href="#drawables" id="id14" name="id14">4.1.2&nbsp;&nbsp;&nbsp;Drawables</a></li>
+<li><a class="reference" href="#groups" id="id15" name="id15">4.1.3&nbsp;&nbsp;&nbsp;Groups</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference" href="#cameras-and-lights" id="id16" name="id16">5&nbsp;&nbsp;&nbsp;Cameras and Lights</a><ul class="auto-toc">
+<li><a class="reference" href="#basics" id="id17" name="id17">5.1&nbsp;&nbsp;&nbsp;Basics</a></li>
+<li><a class="reference" href="#camera-controls" id="id18" name="id18">5.2&nbsp;&nbsp;&nbsp;Camera Controls</a></li>
+<li><a class="reference" href="#lighting" id="id19" name="id19">5.3&nbsp;&nbsp;&nbsp;Lighting</a></li>
+<li><a class="reference" href="#projections" id="id20" name="id20">5.4&nbsp;&nbsp;&nbsp;Projections</a></li>
+<li><a class="reference" href="#viewports-experimental" id="id21" name="id21">5.5&nbsp;&nbsp;&nbsp;Viewports (Experimental)</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#tracks" id="id22" name="id22">6&nbsp;&nbsp;&nbsp;Tracks</a><ul class="auto-toc">
+<li><a class="reference" href="#overview" id="id23" name="id23">6.1&nbsp;&nbsp;&nbsp;Overview</a></li>
+<li><a class="reference" href="#positional-tracks" id="id24" name="id24">6.2&nbsp;&nbsp;&nbsp;Positional Tracks</a></li>
+<li><a class="reference" href="#camera-tracks" id="id25" name="id25">6.3&nbsp;&nbsp;&nbsp;Camera Tracks</a></li>
+<li><a class="reference" href="#registration" id="id26" name="id26">6.4&nbsp;&nbsp;&nbsp;Registration</a></li>
+<li><a class="reference" href="#deactivation" id="id27" name="id27">6.5&nbsp;&nbsp;&nbsp;Deactivation</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#the-on-screen-display-osd" id="id28" name="id28">7&nbsp;&nbsp;&nbsp;The On Screen Display (OSD)</a></li>
+<li><a class="reference" href="#effects" id="id29" name="id29">8&nbsp;&nbsp;&nbsp;Effects</a></li>
+<li><a class="reference" href="#scene-culling" id="id30" name="id30">9&nbsp;&nbsp;&nbsp;Scene Culling</a></li>
+<li><a class="reference" href="#render-stages" id="id31" name="id31">10&nbsp;&nbsp;&nbsp;Render Stages</a></li>
+</ul>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id8" id="installation" name="installation">1&nbsp;&nbsp;&nbsp;Installation</a></h1>
+<p>You can grab the current distribution of Miru here:</p>
+<blockquote>
+<strong>Miru 0.0.2</strong> <a class="reference" href="http://miru.enterthefoo.com/releases/Miru-0.0.2.tar.gz">http://miru.enterthefoo.com/releases/Miru-0.0.2.tar.gz</a></blockquote>
+<p>You can grab the latest sources from the mercurial repository as well:</p>
+<blockquote>
+<tt class="docutils literal"><span class="pre">hg</span> <span class="pre">clone</span> <span class="pre">http://hg.enterthefoo.com/Miru</span> <span class="pre">Miru</span></tt></blockquote>
+<p>There is also a dependency-bundled version of Miru (including Twisted,
+zope.interface and pyeuclid) which will allow you to play around
+with Miru to see the gruel I've generated and decide for yourself if it's
+even worth bothering with before properly installing the dependencies:</p>
+<blockquote>
+<strong>Miru 0.0.2 (w/ deps)</strong> <a class="reference" href="http://miru.enterthefoo.com/releases/Miru-bundled-0.0.2.tar.gz">http://miru.enterthefoo.com/releases/Miru-bundled-0.0.2.tar.gz</a></blockquote>
+<p>If you want to install globally to your python installation,
+do the usual thing:</p>
+<pre class="literal-block">
+$ python setup.py install
+</pre>
+<p>A side note: Anything &quot;C&quot; in either Twisted or zope.interface
+is strictly an optional C optimization - and trust me, you don't really
+need these C optimizations for Miru. Distutils and setuptools may trick
+you into beliveing that you have to <em>build</em> zope.interface and Twisted
+This simply isn't true. <a class="footnote-reference" href="#id6" id="id1" name="id1">[1]</a></p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id9" id="quick-start" name="quick-start">2&nbsp;&nbsp;&nbsp;Quick Start</a></h1>
+<p>The following demonstrates a minimal miru application:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.ui</span> <span class="k">import</span> <span class="n">TestWindow</span>
+<span class="k">from</span> <span class="nn">miru.environment</span> <span class="k">import</span> <span class="n">env</span>
+
+<span class="n">w</span> <span class="o">=</span> <span class="n">TestWindow</span><span class="p">(</span><span class="mf">680</span><span class="p">,</span><span class="mf">400</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="n">w</span>
+
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">dispatch_events</span><span class="p">()</span>
+    <span class="n">env</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">flip</span><span class="p">()</span>
+</pre></div>
+<p>Firing up this example you will see ... a black screen!  Congratulations!
+Okay, so that isn't very much fun.  Let's make a window with a mesh loaded
+from an external .OBJ file by adding the following lines to the above
+program:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.mesh</span> <span class="k">import</span> <span class="n">loadObj</span>
+<span class="k">import</span> <span class="nn">os</span>
+
+<span class="n">o</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;docs&#39;</span><span class="p">,</span> <span class="s">&#39;demo&#39;</span><span class="p">,</span> <span class="s">&#39;alien.obj&#39;</span><span class="p">))</span>
+<span class="n">env</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+</pre></div>
+<p>And finally we can also turn on our interactive python interpretter
+using the toggle_console function from miru.editor:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.editor</span> <span class="k">import</span> <span class="n">toggle_console</span>
+<span class="n">toggle_console</span><span class="p">()</span>
+</pre></div>
+<p>TestWindow also will give you a default key-binding <tt class="docutils literal"><span class="pre">CTL-T</span></tt>
+(which will allow to turn
+the on-screen display console on and off).  In most applications, you should
+create your own window implementation (which generally should be a subclass
+or <tt class="docutils literal"><span class="pre">miru.ui.BaseWindow</span></tt>) with your desired global key bindings. For example:</p>
+<div class="highlight"><pre><span class="k">class</span> <span class="nc">MyWindow</span><span class="p">(</span><span class="n">miru</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">BaseWindow</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">on_key_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">modifiers</span><span class="p">):</span>
+        <span class="o">...</span>
+</pre></div>
+<p>Note that the interactive interpretter is great tool for learning Miru and
+pyglet.  It allows you to directly manipulate the environment and see
+the effects.</p>
+<p>Finally, here is a completed example - &quot;Hello World&quot;:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.ui</span> <span class="k">import</span> <span class="n">TestWindow</span>
+<span class="k">from</span> <span class="nn">miru.environment</span> <span class="k">import</span> <span class="n">env</span>
+<span class="k">from</span> <span class="nn">miru.mesh</span> <span class="k">import</span> <span class="n">loadObj</span>
+<span class="k">from</span> <span class="nn">miru.editor</span> <span class="k">import</span> <span class="n">toggle_console</span>
+<span class="k">import</span> <span class="nn">os</span>
+
+
+<span class="n">w</span> <span class="o">=</span> <span class="n">TestWindow</span><span class="p">(</span><span class="mf">680</span><span class="p">,</span><span class="mf">400</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="n">w</span>
+
+<span class="c"># Load mesh from external Wavefront OBJ file</span>
+<span class="n">o</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;docs&#39;</span><span class="p">,</span> <span class="s">&#39;demo&#39;</span><span class="p">,</span> <span class="s">&#39;alien.obj&#39;</span><span class="p">))</span>
+<span class="n">env</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+
+<span class="c"># Turn the console on</span>
+<span class="n">toggle_console</span><span class="p">()</span>
+
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">dispatch_events</span><span class="p">()</span>
+    <span class="n">env</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">flip</span><span class="p">()</span>
+</pre></div>
+<div class="figure">
+<img alt="Python console" src="quickstart-screen.png" />
+<p class="caption">A scene rendered with a &quot;usable&quot; Python console in the display</p>
+</div>
+<p>Remember <tt class="docutils literal"><span class="pre">CTL-T</span></tt> can be used to turn the console on and off.  Also, a mouse
+handler is enabled by default which will enable you to click on the trapezoidal
+object and move it around.  Gee, that was ... fun.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id10" id="interfaces" name="interfaces">3&nbsp;&nbsp;&nbsp;Interfaces</a></h1>
+<p>The module <tt class="docutils literal"><span class="pre">miru.imiru</span></tt> contains all the interfaces used by miru.  An explanation
+of what interfaces do is outside the scope of this document, but briefly, an
+interface documents the expected behavior of a component separately from the implementation.
+Since interfaces are actually code, they can also be used to verify implementation
+correctness in unit tests, and adapt arbiraty objects to an interface at runtime.
+Many classes in <tt class="docutils literal"><span class="pre">miru</span></tt> implement interfaces imported from
+<tt class="docutils literal"><span class="pre">miru.imiru</span></tt>, and in those instances you should peruse the documentation -
+if it exists ;) - on the
+interface as opposed to the concrete implementation.  For example,
+<tt class="docutils literal"><span class="pre">miru.environment.Environment</span></tt> implements <tt class="docutils literal"><span class="pre">imiru.IEnvironment</span></tt>:</p>
+<div class="highlight"><pre><span class="k">class</span> <span class="nc">IEnvironment</span><span class="p">(</span><span class="n">Interface</span><span class="p">):</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">        The current window (C{pyglet.window.Window})&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">objects</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">        C{list} of objects in the world (current scene)&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">osd</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">        (Optional) On Screen Display (miru.osd.OSD)&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">cameras</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">        Map of cameras set up for the scene.  If not explicitly set,</span>
+<span class="s">        the current camera is assigned the key `main&#39;&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">camera</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">        The current camera used for rendering the scene&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">handle</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">        (Optional) Mouse handler for selecting objects&quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">renderStage</span><span class="p">(</span><span class="n">iface</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the C{IRenderStage} provider for the given Interface.</span>
+
+<span class="sd">        @param iface: The C{IRenderStage} Interface we are looking for</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">setRenderStages</span><span class="p">(</span><span class="o">*</span><span class="n">ifaces</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set render stages for the environment.  The interfaces supplied must</span>
+<span class="sd">        first have a provider utility registered with</span>
+<span class="sd">        C{miru.components.registerUtility} before calling this method.</span>
+
+<span class="sd">        @param iface: Listing of C{IRenderStage} Interfaces.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">render</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Render the evironment - invoking its render stages in the order added.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">addobj</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an object to the environment.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">delobj</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove an object from the environment.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id11" id="the-environment-singleton" name="the-environment-singleton">4&nbsp;&nbsp;&nbsp;The Environment Singleton</a></h1>
+<p><em>Behold, the singleton anti-pattern! --Also Sproch Zarahustra</em></p>
+<p>The environment class provides a global singleton which can be used to reference
+many objects that often need to be queried on a global level.  Exposed attributes
+are documented in <tt class="docutils literal"><span class="pre">IEnvironment</span></tt> and include:</p>
+<ul class="simple">
+<li>window: The pyglet.window.Window created for the application</li>
+<li>objects: Objects added to the world</li>
+<li>handle: Mouse or generic device handle</li>
+<li>camera: The current camera used for rendering the 3d scene</li>
+</ul>
+<p>The env object also provides a simple interface for adding and removing objects.
+To add an object:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.environment</span> <span class="k">import</span> <span class="n">env</span>
+<span class="n">env</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+</pre></div>
+<p>To remove and object:</p>
+<div class="highlight"><pre><span class="n">env</span><span class="o">.</span><span class="n">delobj</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+</pre></div>
+<div class="section">
+<h2><a class="toc-backref" href="#id12" id="objects-and-drawables" name="objects-and-drawables">4.1&nbsp;&nbsp;&nbsp;Objects and Drawables</a></h2>
+<div class="contents local topic">
+<ul class="auto-toc simple">
+<li><a class="reference" href="#newobject" id="id32" name="id32">4.1.1&nbsp;&nbsp;&nbsp;newObject</a></li>
+<li><a class="reference" href="#drawables" id="id33" name="id33">4.1.2&nbsp;&nbsp;&nbsp;Drawables</a></li>
+<li><a class="reference" href="#groups" id="id34" name="id34">4.1.3&nbsp;&nbsp;&nbsp;Groups</a></li>
+</ul>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id32" id="newobject" name="newobject">4.1.1&nbsp;&nbsp;&nbsp;newObject</a></h3>
+<p>An instance of <tt class="docutils literal"><span class="pre">miru.mesh.Object</span></tt> is simply a positional placeholder for an drawable object.
+To <tt class="docutils literal"><span class="pre">newObject</span></tt> function should be used when creating and object to be added to
+the global environment.  Example:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.mesh</span> <span class="k">import</span> <span class="n">newObject</span><span class="p">,</span> <span class="n">Sphere</span>
+
+<span class="n">sphere</span> <span class="o">=</span> <span class="n">newObject</span><span class="p">(</span><span class="n">Sphere</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">sphere</span><span class="p">)</span>
+</pre></div>
+<p>newObject takes a class followed by positional and keyword arguments to pass to the
+<tt class="docutils literal"><span class="pre">__init__</span></tt> method of the class.  It returns an instance of Object wrapping the
+underlying drawable object.</p>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">There are many reasons for using a wrapper rather than
+the underyling object directly with postional attributes inherited from a
+super class. For one, we can have serveral distinct objects with different
+positions and orientations reference a single drawable object.  Most
+importantly, a drawable object may consume a fair amount of space with vertex and normal
+data, so having a container to reference it provides a convenient memory
+optimization.</p>
+</div>
+<p>To move the sphere we created along the y-axis by Y:</p>
+<div class="highlight"><pre><span class="n">sphere</span><span class="o">.</span><span class="n">pos</span> <span class="o">+=</span> <span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="n">Y</span><span class="p">,</span><span class="mf">0</span><span class="p">)</span>
+</pre></div>
+<p>To rotate the sphere along it's Z-axis by Z:</p>
+<div class="highlight"><pre><span class="n">sphere</span><span class="o">.</span><span class="n">angle</span> <span class="o">+=</span> <span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="n">Z</span><span class="p">)</span>
+</pre></div>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">The orientation of an object is indeed just an Euler.  This is problematic for advanced
+transformations and interpolation of poses, so Miru will likely expose more
+flexible matrix or quaternion representations in a future version.  For now,
+you'll have to suffer the badness of the Euler representation or write your own
+transformation functions on top of Miru.</p>
+</div>
+<p>To remove the sphere from the environment:</p>
+<div class="highlight"><pre><span class="n">env</span><span class="o">.</span><span class="n">delobj</span><span class="p">(</span><span class="n">sphere</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id33" id="drawables" name="drawables">4.1.2&nbsp;&nbsp;&nbsp;Drawables</a></h3>
+<p>Instances of <tt class="docutils literal"><span class="pre">Object</span></tt> have an attribute <tt class="docutils literal"><span class="pre">drawable</span></tt> which provides a reference
+to the underlying drawing primitive (several of which, including <tt class="docutils literal"><span class="pre">Mesh</span></tt>) are
+defined in the mesh module.  The <tt class="docutils literal"><span class="pre">loadObj</span></tt> function referred to in the Quick Start
+section merely wraps a new <tt class="docutils literal"><span class="pre">Mesh</span></tt> in an instance of <tt class="docutils literal"><span class="pre">Object</span></tt>:</p>
+<div class="highlight"><pre><span class="k">def</span> <span class="nf">loadObj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">flip_normals</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">interleave</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="k">from</span> <span class="nn">miru.tools</span> <span class="k">import</span> <span class="n">obj</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">_loaded_meshes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Object</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">ObjParser</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">flip_normals</span><span class="o">=</span><span class="n">flip_normals</span><span class="p">)</span>
+    <span class="n">f</span><span class="p">,</span><span class="n">d</span><span class="p">,</span><span class="n">data</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">obj2mesh</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">interleave</span><span class="o">=</span><span class="n">interleave</span><span class="p">)</span>
+    <span class="n">_loaded_meshes</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh</span>
+    <span class="k">return</span> <span class="n">Object</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+</pre></div>
+<p>Let's  examine an <tt class="docutils literal"><span class="pre">Object</span></tt> instance to see how it wraps the underlying primitive:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">o</span> <span class="o">=</span> <span class="n">newObject</span><span class="p">(</span><span class="n">Sphere</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">o</span>
+<span class="go">&lt;miru.mesh.Object at 89d254c &lt;miru.mesh.Sphere object at 0xb789da6c&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">o</span><span class="o">.</span><span class="n">drawable</span>
+<span class="go">&lt;miru.mesh.Sphere object at 0xb789da6c&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">miru.imiru</span> <span class="k">import</span> <span class="n">IWorldObject</span> <span class="c"># Adapting to IWorldObject provider</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">IWorldObject</span><span class="p">(</span><span class="n">o</span><span class="p">)</span> <span class="o">==</span> <span class="n">o</span><span class="o">.</span><span class="n">drawable</span>
+<span class="go">True</span>
+</pre></div>
+<p>The <tt class="docutils literal"><span class="pre">IWorldObject</span></tt> interface is simply a stub interface for marking objects as
+appropriate for rendering in a 3D context.  Implementations include <tt class="docutils literal"><span class="pre">miru.mesh.Sphere</span></tt>,
+<tt class="docutils literal"><span class="pre">miru.mesh.Mesh</span></tt> and <tt class="docutils literal"><span class="pre">miru.mesh.ImageWrapper</span></tt>.</p>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id34" id="groups" name="groups">4.1.3&nbsp;&nbsp;&nbsp;Groups</a></h3>
+<p>Objects can also be grouped together by via an instance of <tt class="docutils literal"><span class="pre">miru.mesh.Group</span></tt>.
+The initializer for a group takes a list of objects:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.mesh</span> <span class="k">import</span> <span class="n">Group</span><span class="p">,</span> <span class="n">Sphere</span><span class="p">,</span> <span class="n">newObject</span>
+<span class="n">s1</span> <span class="o">=</span> <span class="n">newObject</span><span class="p">(</span><span class="n">Sphere</span><span class="p">)</span>
+<span class="n">s2</span> <span class="o">=</span> <span class="n">newObject</span><span class="p">(</span><span class="n">Sphere</span><span class="p">)</span>
+<span class="n">s2</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">)</span>
+<span class="n">s3</span> <span class="o">=</span> <span class="n">newObject</span><span class="p">(</span><span class="n">Sphere</span><span class="p">)</span>
+<span class="n">s3</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">)</span>
+<span class="n">group</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span><span class="n">s2</span><span class="p">,</span><span class="n">s3</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+</pre></div>
+<p>Note that <tt class="docutils literal"><span class="pre">Group</span></tt> is a sublclass of <tt class="docutils literal"><span class="pre">Object</span></tt>.  A group can also be <cite>compiled</cite>, meaning
+the underlying objects are drawn once as part of a display list:</p>
+<div class="highlight"><pre><span class="n">group</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span><span class="n">s2</span><span class="p">,</span><span class="n">s3</span><span class="p">,</span><span class="nb">compile</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+</pre></div>
+<p>Be careful when using the compile flag, since one or more of grouped objects'
+draw method may invoke call a display list itself via <tt class="docutils literal"><span class="pre">glCallList</span></tt> - and nesting
+display lists is an invalid operation.  For grouping <tt class="docutils literal"><span class="pre">Mesh</span></tt> instances (which by default
+use a display list on draw), you can first create the meshes with compilation turned
+off.  For example:</p>
+<div class="highlight"><pre><span class="n">head</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="s">&#39;head.obj&#39;</span><span class="p">,</span> <span class="nb">compile</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">hat</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="s">&#39;hat.obj&#39;</span><span class="p">,</span> <span class="nb">compile</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">group</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">head</span><span class="p">,</span> <span class="n">hat</span><span class="p">,</span> <span class="nb">compile</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+</pre></div>
+<div class="caution">
+<p class="first admonition-title">Caution!</p>
+<p class="last">You should never compile a group if the objects making
+up the group change position relative to the root position at runtime.
+In other words, those objects will <strong>not</strong> get redrawn, of course,
+to reflect their new positions.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id16" id="cameras-and-lights" name="cameras-and-lights">5&nbsp;&nbsp;&nbsp;Cameras and Lights</a></h1>
+<div class="contents local topic">
+<ul class="auto-toc simple">
+<li><a class="reference" href="#basics" id="id35" name="id35">5.1&nbsp;&nbsp;&nbsp;Basics</a></li>
+<li><a class="reference" href="#camera-controls" id="id36" name="id36">5.2&nbsp;&nbsp;&nbsp;Camera Controls</a></li>
+<li><a class="reference" href="#lighting" id="id37" name="id37">5.3&nbsp;&nbsp;&nbsp;Lighting</a></li>
+<li><a class="reference" href="#projections" id="id38" name="id38">5.4&nbsp;&nbsp;&nbsp;Projections</a></li>
+<li><a class="reference" href="#viewports-experimental" id="id39" name="id39">5.5&nbsp;&nbsp;&nbsp;Viewports (Experimental)</a></li>
+</ul>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id35" id="basics" name="basics">5.1&nbsp;&nbsp;&nbsp;Basics</a></h2>
+<p>Camera and Lighting abstractions can be found in the module <tt class="docutils literal"><span class="pre">miru.camera</span></tt>.
+Creating a camera:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.camera</span> <span class="k">import</span> <span class="n">Camera</span>
+<span class="n">camera</span> <span class="o">=</span> <span class="n">Camera</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mf">1</span><span class="p">,</span><span class="mf">4</span><span class="p">,</span><span class="mf">5</span><span class="p">),</span> <span class="n">wireframe</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">cameras</span><span class="p">[</span><span class="s">&#39;secondary&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">camera</span>
+</pre></div>
+<p>The above code creates a camera positoned at XYZ coordinates (1,4,5) and with wireframe
+rendering turned on.  To set the main camera to the secondary camera we defined above:</p>
+<div class="highlight"><pre><span class="n">camera</span><span class="o">.</span><span class="n">objects</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">objects</span> <span class="c"># link visible objects between cameras</span>
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">cameras</span><span class="p">[</span><span class="s">&#39;secondary&#39;</span><span class="p">]</span>
+</pre></div>
+<p>We won't be able to see anything in our scene, however, since we haven't declared any lights
+for our camera. Let's fix this:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.camera</span> <span class="k">import</span> <span class="n">LightGroup</span><span class="p">,</span> <span class="n">PositionalLight</span>
+<span class="n">lights</span> <span class="o">=</span> <span class="n">LightGroup</span><span class="p">([</span><span class="n">PositionalLight</span><span class="p">(),</span> <span class="n">PositionalLight</span><span class="p">((</span><span class="mf">2</span><span class="p">,</span><span class="mf">3</span><span class="p">,</span><span class="mf">4</span><span class="p">))])</span>
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">lights</span> <span class="o">=</span> <span class="n">lights</span>
+</pre></div>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id36" id="camera-controls" name="camera-controls">5.2&nbsp;&nbsp;&nbsp;Camera Controls</a></h2>
+<p>An interesting feature of <tt class="docutils literal"><span class="pre">miru.camera.Camera</span></tt> is the ability to follow objects - similar
+to stationary camera on a rotational pivot.</p>
+<div class="highlight"><pre><span class="n">raceCar</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="s">&#39;racecar.obj&#39;</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">track_target</span> <span class="o">=</span> <span class="n">raceCar</span>
+</pre></div>
+<p>To disable, simply set <tt class="docutils literal"><span class="pre">track_target</span></tt> to <tt class="docutils literal"><span class="pre">None</span></tt>:</p>
+<div class="highlight"><pre><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">track_target</span> <span class="o">=</span> <span class="bp">None</span>
+</pre></div>
+<p>The camera's angle can also be interpretted as either a rotation (or orbit) around
+the origin, or a rotation around the local axis.  Support for orbiting around a
+specified point is a planned feature.</p>
+<p>To set the rotational mode of the camera to orbit (default):</p>
+<div class="highlight"><pre><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">rotation_mode</span> <span class="o">=</span> <span class="n">Camera</span><span class="o">.</span><span class="n">ORBIT_MODE</span>
+</pre></div>
+<p>To set the rotational mode of the camera to local axis based:</p>
+<div class="highlight"><pre><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">rotation_mode</span> <span class="o">=</span> <span class="n">Camera</span><span class="o">.</span><span class="n">ROTATION_MODE</span>
+</pre></div>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id37" id="lighting" name="lighting">5.3&nbsp;&nbsp;&nbsp;Lighting</a></h2>
+<p>The are two classes of lights currently supported by Miru:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">miru.camera.DirectionalLight</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">miru.camera.PositionalLight</span></tt></li>
+</ul>
+<p>A directional light acts as a light placed at an inifite distance from the visible object,
+providing ambient light with a constant from it's origin.   A positional light behaves similar
+to a spot light.</p>
+<div class="figure">
+<img alt="Positional Lights with debugging enabled" src="lights.png" />
+<p class="caption">Debugging enabled on positional lights placed in a scene</p>
+</div>
+<p>A positional light with a spot cutoff in the range [0,90] will have a cone-shaped light
+with an angle given by the cutoff value:</p>
+<div class="highlight"><pre><span class="n">spotlight</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">PositionalLight</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">2</span><span class="p">,</span><span class="mf">0</span><span class="p">),</span> <span class="n">spot_cutoff</span><span class="o">=</span><span class="mf">25</span><span class="p">,</span>
+    <span class="n">spot_exponent</span><span class="o">=</span><span class="mf">10</span><span class="p">,</span> <span class="n">kq</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spotlight</span><span class="p">)</span>
+</pre></div>
+<p>You can enable debugging on a positional light to see it's location in the scene.</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pl</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">lights</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span> <span class="c"># assuming the first light is a positional light</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pl</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="mf">1</span>
+</pre></div>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id38" id="projections" name="projections">5.4&nbsp;&nbsp;&nbsp;Projections</a></h2>
+<p>By default, a camera has a perspective projection - objects in the distance appear
+smaller than objects closer to the camera's position.  The projection can be set on
+on a camera with either a perspective projection (<tt class="docutils literal"><span class="pre">miru.camera.PerspectiveProjection</span></tt>)
+or an orthographic projection (<tt class="docutils literal"><span class="pre">miru.camera.OrthographicProjection</span></tt>).</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru</span> <span class="k">import</span> <span class="n">camera</span>
+<span class="n">orthoproj</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">OrthographicProjection</span><span class="p">()</span>
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">projection</span> <span class="o">=</span> <span class="n">orthoproj</span>
+</pre></div>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id39" id="viewports-experimental" name="viewports-experimental">5.5&nbsp;&nbsp;&nbsp;Viewports (Experimental)</a></h2>
+<p>By default, a projection gives you a viewport with its lower left corner positioned
+at the bottom left of the window and spanning the width and height of the window.
+Miru provides some experimental support for enabling multiple viewports in a single window.
+The class <tt class="docutils literal"><span class="pre">miru.camera.Viewport</span></tt> is a special type of projection which wraps a target projection
+(by default <tt class="docutils literal"><span class="pre">miru.camera.PerspectiveProjection</span></tt>) and contains some viewport information -
+the bottom left (<tt class="docutils literal"><span class="pre">bl</span></tt>) and the top right (<tt class="docutils literal"><span class="pre">tr</span></tt>) corners of the viewport.  Both <tt class="docutils literal"><span class="pre">bl</span></tt> and <tt class="docutils literal"><span class="pre">tr</span></tt>
+are 2-tuples giving the corresponding <cite>(x, y)</cite>  coordinates; their values should be in the range
+<cite>[0,1]</cite> and abide by the constraints <cite>tr[0] &gt; bl[0]</cite> and <cite>tr[1] &gt; bl[1]</cite>.</p>
+<p>Setting a single viewport on a single camera isn't very interesting.  We want to combine
+multiple camera views on one windoe.  The class <tt class="docutils literal"><span class="pre">miru.camera.MetaCamera</span></tt> allows
+us to do just this by specifying the combination of cameras and viewports to use.  The following
+example shows how to divide a screen into quadrants - each rendering a different projection
+on the scene:</p>
+<div class="highlight"><pre><span class="n">lights</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">LightGroup</span><span class="p">([</span>
+            <span class="n">camera</span><span class="o">.</span><span class="n">PositionalLight</span><span class="p">(),</span> <span class="n">camera</span><span class="o">.</span><span class="n">DirectionalLight</span><span class="p">()])</span>
+
+<span class="n">cam1</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">Camera</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">4</span><span class="p">),</span> <span class="n">angle</span><span class="o">=</span><span class="p">(</span><span class="mf">15</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">),</span> <span class="n">lights</span><span class="o">=</span><span class="n">lights</span><span class="p">,</span>
+        <span class="n">projection</span><span class="o">=</span><span class="n">camera</span><span class="o">.</span><span class="n">Viewport</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">),(</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">1.0</span><span class="p">)))</span>
+<span class="n">cam2</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">Camera</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">2</span><span class="p">,</span><span class="mf">8</span><span class="p">),</span> <span class="n">angle</span><span class="o">=</span><span class="p">(</span><span class="mf">45</span><span class="p">,</span><span class="mf">180</span><span class="p">,</span><span class="mf">0</span><span class="p">),</span> <span class="n">lights</span><span class="o">=</span><span class="n">lights</span><span class="p">,</span>
+        <span class="n">projection</span><span class="o">=</span><span class="n">camera</span><span class="o">.</span><span class="n">Viewport</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">),(</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">1.0</span><span class="p">)))</span>
+<span class="n">cam3</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">Camera</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">7</span><span class="p">),</span> <span class="n">angle</span><span class="o">=</span><span class="p">(</span><span class="mf">90</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">),</span> <span class="n">lights</span><span class="o">=</span><span class="n">lights</span><span class="p">,</span>
+        <span class="n">projection</span><span class="o">=</span><span class="n">camera</span><span class="o">.</span><span class="n">Viewport</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">),(</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">)))</span>
+<span class="n">cam4</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">Camera</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">5</span><span class="p">),</span> <span class="n">angle</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">50</span><span class="p">,</span><span class="mf">0</span><span class="p">),</span> <span class="n">lights</span><span class="o">=</span><span class="n">lights</span><span class="p">,</span>
+        <span class="n">projection</span><span class="o">=</span><span class="n">camera</span><span class="o">.</span><span class="n">Viewport</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.0</span><span class="p">),(</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">)))</span>
+
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">MetaCamera</span><span class="p">(</span><span class="n">cam1</span><span class="p">,</span> <span class="n">cam2</span><span class="p">,</span> <span class="n">cam3</span><span class="p">,</span> <span class="n">cam4</span><span class="p">)</span>
+<span class="c"># Link the objects</span>
+<span class="n">cam4</span><span class="o">.</span><span class="n">objects</span> <span class="o">=</span> <span class="n">cam3</span><span class="o">.</span><span class="n">objects</span> <span class="o">=</span> <span class="n">cam2</span><span class="o">.</span><span class="n">objects</span> <span class="o">=</span> <span class="n">cam1</span><span class="o">.</span><span class="n">objects</span>
+<span class="c"># Turn debugging on to draw set an outline around each viewport</span>
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+</pre></div>
+<div class="figure">
+<img alt="A single window divided into quadrants" src="viewports.png" />
+<p class="caption">A single window divided into quadrants</p>
+</div>
+<p>To set the context projection on a viewport:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">miru</span> <span class="k">import</span> <span class="n">camera</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">viewport</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">Viewport</span><span class="p">((</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">),(</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">),</span> <span class="n">camera</span><span class="o">.</span><span class="n">OrthographicProjection</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id22" id="tracks" name="tracks">6&nbsp;&nbsp;&nbsp;Tracks</a></h1>
+<p>Position and orientation tracks be defined between objects that implement
+<tt class="docutils literal"><span class="pre">miru.imiru.IPostional</span></tt> <a class="footnote-reference" href="#id7" id="id4" name="id4">[2]</a> .</p>
+<div class="contents local topic">
+<ul class="auto-toc simple">
+<li><a class="reference" href="#overview" id="id40" name="id40">6.1&nbsp;&nbsp;&nbsp;Overview</a></li>
+<li><a class="reference" href="#positional-tracks" id="id41" name="id41">6.2&nbsp;&nbsp;&nbsp;Positional Tracks</a></li>
+<li><a class="reference" href="#camera-tracks" id="id42" name="id42">6.3&nbsp;&nbsp;&nbsp;Camera Tracks</a></li>
+<li><a class="reference" href="#registration" id="id43" name="id43">6.4&nbsp;&nbsp;&nbsp;Registration</a></li>
+<li><a class="reference" href="#deactivation" id="id44" name="id44">6.5&nbsp;&nbsp;&nbsp;Deactivation</a></li>
+</ul>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id40" id="overview" name="overview">6.1&nbsp;&nbsp;&nbsp;Overview</a></h2>
+<p>A track defines <em>master-slave</em>
+relationship between two objects on either the objects position or attribute.
+In Miru's terminology the master is called to as the <em>tracked</em>  and the
+slave is called the <em>tracker</em>.  When a track is defined over a tracker <strong>S</strong> and
+a tracked <strong>T</strong> the position or angle of <strong>S</strong> is always changed relative to
+<strong>T</strong>.  Thus, if a positional track is defined between <strong>S</strong> and <strong>T</strong> where <strong>S</strong> begins
+at <cite>(x,y,z)</cite> and <strong>T</strong> begins at <cite>(u,v,w)</cite>, if <strong>S</strong> moves to position <cite>(x2,y2,z2)</cite>, then
+<strong>T</strong> is implicitly translated to position <cite>(u + (x2-x), v + (y2-y), w + (z2-z))</cite>.
+Confused? Good let's move on to the next section.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id41" id="positional-tracks" name="positional-tracks">6.2&nbsp;&nbsp;&nbsp;Positional Tracks</a></h2>
+<p>Here is a concrete example of this:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.track</span> <span class="k">import</span> <span class="n">PosTrack</span>
+<span class="n">leg</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="s">&#39;leg.obj&#39;</span><span class="p">)</span>
+<span class="n">foot</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="s">&#39;foot.obj&#39;</span><span class="p">)</span>
+<span class="n">foot</span><span class="o">.</span><span class="n">pos</span> <span class="o">-=</span> <span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">2</span><span class="p">,</span><span class="mf">0</span><span class="p">)</span>
+<span class="n">track</span> <span class="o">=</span> <span class="n">PosTrack</span><span class="p">(</span><span class="n">foot</span><span class="p">,</span> <span class="n">leg</span><span class="p">)</span> <span class="c"># Set up the Positional Track</span>
+</pre></div>
+<p>Notice now that as the leg moves, the foot moves along with it:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nb">tuple</span><span class="p">(</span><span class="n">leg</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
+<span class="go">(0, 0, 0)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">tuple</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
+<span class="go">(0, -2, 0)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">leg</span><span class="o">.</span><span class="n">pos</span> <span class="o">+=</span> <span class="p">(</span><span class="mf">1</span><span class="p">,</span><span class="mf">2</span><span class="p">,</span><span class="mf">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">tuple</span><span class="p">(</span><span class="n">leg</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
+<span class="go">(1, 2, 3)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">tuple</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
+<span class="go">(1, 0, 3)</span>
+</pre></div>
+<p>The tracker-tracked relationship is also one-to-many, so we can create other
+tracks on the leg:</p>
+<div class="highlight"><pre><span class="n">knee</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="s">&#39;knee.obj&#39;</span><span class="p">)</span>
+<span class="n">knee</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">leg</span><span class="o">.</span><span class="n">pos</span> <span class="o">-</span> <span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">)</span>
+<span class="n">track2</span> <span class="o">=</span> <span class="n">PosTrack</span><span class="p">(</span><span class="n">knee</span><span class="p">,</span> <span class="n">leg</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id42" id="camera-tracks" name="camera-tracks">6.3&nbsp;&nbsp;&nbsp;Camera Tracks</a></h2>
+<p>Tracks, can also be used to make a camera follow an object in the world, which can
+be very usefule for games.  You can define a PosTrack as defined above or even
+use a custom side-scroller track which will only follow the tracked object as
+it reaches the screen boundary:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.track</span> <span class="k">import</span> <span class="n">SSCameraTrack</span>
+<span class="n">avatar</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="s">&#39;avatar.obj&#39;</span><span class="p">)</span>
+<span class="n">SSCameraTrack</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="p">,</span> <span class="n">avatar</span><span class="p">,</span> <span class="n">env</span><span class="o">.</span><span class="n">window</span><span class="p">)</span>
+</pre></div>
+<p>You can also compose tracks.  With a slight modification to the above code example
+we can make our camera also follow the avatar along the z-axis:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.track</span> <span class="k">import</span> <span class="n">SSCameraTrack</span>
+<span class="n">avatar</span> <span class="o">=</span> <span class="n">loadObj</span><span class="p">(</span><span class="s">&#39;avatar.obj&#39;</span><span class="p">)</span>
+<span class="n">SSCameraTrack</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="p">,</span> <span class="n">avatar</span><span class="p">,</span> <span class="n">env</span><span class="o">.</span><span class="n">window</span><span class="p">)</span>
+<span class="n">PosTrack</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="p">,</span> <span class="n">avatar</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">))</span>
+</pre></div>
+<div class="figure">
+<img alt="Side Scroller Track" src="sstrack.png" />
+<p class="caption">The camera allows the ball to move freely in the scene and then follow it
+as it reaches the edge of the viewport.</p>
+</div>
+<div class="caution">
+<p class="first admonition-title">Caution!</p>
+<p class="last">Do not be confused by the <tt class="docutils literal"><span class="pre">track_target</span></tt> attribute of <tt class="docutils literal"><span class="pre">miru.camera.Camera</span></tt>.  While
+similar in concept (and in terminology) - <tt class="docutils literal"><span class="pre">track_target</span></tt> does not use a Track.
+Expect wacky things to occur (for now), if you set <tt class="docutils literal"><span class="pre">track_target</span></tt>
+on a camera and also set up tracks as described in this section.</p>
+</div>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id43" id="registration" name="registration">6.4&nbsp;&nbsp;&nbsp;Registration</a></h2>
+<p>Tracks are registered globally on both the tracker and the tracked.  To get a list
+of tracks setup for Avatar as a tracked object:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">miru.track</span> <span class="k">import</span> <span class="n">gettracks</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gettracks</span><span class="p">(</span><span class="n">tracked</span><span class="o">=</span><span class="n">avatar</span><span class="p">)</span>
+<span class="go">[...]</span>
+</pre></div>
+<p>We can call also find out what we're tracking:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">gettracks</span><span class="p">(</span><span class="n">tracker</span><span class="o">=</span><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span>
+<span class="go">[...]</span>
+</pre></div>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id44" id="deactivation" name="deactivation">6.5&nbsp;&nbsp;&nbsp;Deactivation</a></h2>
+<p>Tracks can also be deactivated (or disabled).  To disable a single track:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">track</span><span class="o">.</span><span class="n">deactivate</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">leg</span><span class="o">.</span><span class="n">pos</span> <span class="o">+=</span> <span class="p">(</span><span class="mf">123</span><span class="p">,</span><span class="mf">45</span><span class="p">,</span><span class="mf">67</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">foot</span><span class="o">.</span><span class="n">pos</span>
+<span class="go">(1,0,3)</span>
+</pre></div>
+<p>Now our foot no longer follows the leg.  We can also disable all tracks on a
+tracked object:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">miru.track</span> <span class="k">import</span> <span class="n">deactivate</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">deactivate</span><span class="p">(</span><span class="n">tracked</span><span class="o">=</span><span class="n">avatar</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gettracks</span><span class="p">(</span><span class="n">tracked</span><span class="o">=</span><span class="n">avatar</span><span class="p">)</span>
+<span class="go">[]</span>
+</pre></div>
+<p>Likewise, we an deactivate all tracks with a given tracker.</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">deactivate</span><span class="p">(</span><span class="n">tracker</span><span class="o">=</span><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gettracks</span><span class="p">(</span><span class="n">tracker</span><span class="o">=</span><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span>
+<span class="go">[]</span>
+</pre></div>
+<div class="caution">
+<p class="first admonition-title">Caution!</p>
+<p class="last">Don't try to go overboard with tracks.  If you define more than 10 trackers an
+object, you should start to worry.  Tracking is a granular operation that isn't
+by any means optimized - it currently entails at least <strong>N</strong> function calls for
+<strong>N</strong> trackers.</p>
+</div>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id28" id="the-on-screen-display-osd" name="the-on-screen-display-osd">7&nbsp;&nbsp;&nbsp;The On Screen Display (OSD)</a></h1>
+<p><tt class="docutils literal"><span class="pre">miru.osd</span></tt> provides an OSD class will renders (by default) after objects in the
+3D world are rendered.  Objects which need to be rendered on screen and not affected
+by world transformations or lighting can be added to the OSD.  For example, we can take an FPS
+display provided by pyglet and place this in the OSD:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">pyglet</span> <span class="k">import</span> <span class="n">clock</span>
+<span class="k">from</span> <span class="nn">pyglet</span> <span class="k">import</span> <span class="n">font</span>
+<span class="n">clock_display</span> <span class="o">=</span> <span class="n">clock</span><span class="o">.</span><span class="n">ClockDisplay</span><span class="p">(</span><span class="n">font</span><span class="o">=</span><span class="n">font</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,</span><span class="mf">18</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span><span class="mf">1.</span><span class="p">,</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.5</span><span class="p">))</span>
+<span class="n">env</span><span class="o">.</span><span class="n">osd</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">clock_display</span><span class="p">)</span>
+</pre></div>
+<p>The Python interactive console mentioned above is also rendered in the OSD layer.</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id29" id="effects" name="effects">8&nbsp;&nbsp;&nbsp;Effects</a></h1>
+<p><tt class="docutils literal"><span class="pre">miru.effects</span></tt> provides two simple effects which can be added to a scene:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">miru.effects.Reflection</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">miru.effects.Fog</span></tt></li>
+</ul>
+<p>Effects are enabled by added them to the effects list on a <tt class="docutils literal"><span class="pre">Camera</span></tt> instance.
+To enable reflection over a plane:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.mesh</span> <span class="k">import</span> <span class="n">CheckerBoard</span>
+<span class="k">from</span> <span class="nn">miru</span> <span class="k">import</span> <span class="n">effects</span>
+
+<span class="n">cb</span> <span class="o">=</span> <span class="n">newObject</span><span class="p">(</span><span class="n">CheckerBoard</span><span class="p">,</span> <span class="n">even_color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.8</span><span class="p">),</span> <span class="n">odd_color</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">0.05</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0.8</span><span class="p">))</span>
+<span class="n">refl</span> <span class="o">=</span> <span class="n">effects</span><span class="o">.</span><span class="n">Reflection</span><span class="p">(</span><span class="n">ground</span><span class="o">=</span><span class="n">cb</span><span class="p">,</span> <span class="n">camera</span><span class="o">=</span><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span>
+
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">effects</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">refl</span><span class="p">)</span>
+</pre></div>
+<p>Effects can also be combined.  The following example demostrates a Reflection effect
+following by Fog application:</p>
+<div class="highlight"><pre><span class="n">fog</span> <span class="o">=</span> <span class="n">effects</span><span class="o">.</span><span class="n">Fog</span><span class="p">(</span><span class="n">density</span><span class="o">=</span><span class="mf">0.075</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.65</span><span class="p">,</span><span class="mf">0.9</span><span class="p">,</span><span class="mf">0.75</span><span class="p">,</span><span class="mf">0.5</span><span class="p">),</span> <span class="n">equation</span><span class="o">=</span><span class="n">effects</span><span class="o">.</span><span class="n">Fog</span><span class="o">.</span><span class="n">EQ_EXP</span><span class="p">)</span>
+<span class="n">cb</span> <span class="o">=</span> <span class="n">newObject</span><span class="p">(</span><span class="n">CheckerBoard</span><span class="p">,</span> <span class="n">even_color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.8</span><span class="p">),</span> <span class="n">odd_color</span><span class="o">=</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="mf">0.05</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0.8</span><span class="p">))</span>
+<span class="n">refl</span> <span class="o">=</span> <span class="n">effects</span><span class="o">.</span><span class="n">Reflection</span><span class="p">(</span><span class="n">ground</span><span class="o">=</span><span class="n">cb</span><span class="p">,</span> <span class="n">camera</span><span class="o">=</span><span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">effects</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">refl</span><span class="p">,</span> <span class="n">fog</span><span class="p">])</span>
+</pre></div>
+<div class="figure">
+<img alt="Reflection and Fog" src="effects.png" />
+<p class="caption">Reflection and Fog are added to a scene to create the effect of objects reflecting over
+a still body of water.</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id30" id="scene-culling" name="scene-culling">9&nbsp;&nbsp;&nbsp;Scene Culling</a></h1>
+<p>TODO</p>
+<div class="figure">
+<img alt="Octree" src="culling.png" />
+<p class="caption">Hierarchical scene culling with an Octree data structure.</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id31" id="render-stages" name="render-stages">10&nbsp;&nbsp;&nbsp;Render Stages</a></h1>
+<p>In the introduction we mentioned that Miru supports render state grouping but we haven't explained
+yet what that actually means.  We've also deferred explanation of what occurs in the <tt class="docutils literal"><span class="pre">render</span></tt> method
+on an environment.  Hopefully this section will explain to you what render stages are, and why
+they're important in any 3D application.</p>
+<p>OpenGL is a state machine, and while it can operate very quickly with modern graphics hardware, tacking
+on too much state in single render cycle can still be detrimental to performance.  A necessary optimization
+is to sort objects drawn in a scene by their state based on enabled attributes: depth testing, lighting,
+etc.  Enabling and disabling such attributes per object rendered is unacceptable.</p>
+<p>The interface <cite>miru.imiru.IRenderStage</cite> specifies a grouping of objects which should all be rendered
+in the same driver state.  For example, when drawing 3D meshes in a scene, certain key attributes should
+be applied for each object:</p>
+<ul class="simple">
+<li>The Polygon mode must be set according to the desired effect (filled quads and triangles or outlines only)</li>
+<li>Lighting should be enabled</li>
+<li>To avoid the complications of manual z-buffer sorting, depth testing should be enabled</li>
+</ul>
+<p>On the other hand, we might want to draw debugging objects as well in the 3D scene with an entirely
+different set of required attributes.  Mixing such objects together with the former in an arbitrary
+order means we'll have to enable/disable attributes many more times than we need to - that is,
+optimially once per attribute per frame.</p>
+<p>By default, the Environment object is initialized with 4 rendering stages in the following order:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">miru.imiru.IWorldRenderStage</span></tt> (default implementation: <tt class="docutils literal"><span class="pre">miru.camera.Camera</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">miru.imiru.IDebuggingRenderStage</span></tt> (default implementation: <tt class="docutils literal"><span class="pre">miru.camera.DebugView</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">miru.imiru.IBlittableRenderStage</span></tt> (default implementation: <tt class="docutils literal"><span class="pre">miru.camera.BlittableView</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">miru.imiru.IOSDRenderStage</span></tt> (default implementation: <tt class="docutils literal"><span class="pre">miru.osd.OSD</span></tt>)</li>
+</ul>
+<div class="figure">
+<img alt="A scene demonstrating 4 render stages" src="render-stages.png" />
+<p class="caption">All four render stages together in harmony.</p>
+</div>
+<p>You are able, however, to set the order as you please, as well as declare (via an interface)
+and implement new rendering stages to plug into the pipeline.  Or, you can
+override previously declared interfaces with a new implementation.  First, let's see how to
+reorder the render stage pipeline:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">miru.imiru</span> <span class="k">import</span> <span class="o">*</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">miru.environment</span> <span class="k">import</span> <span class="n">env</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">env</span><span class="o">.</span><span class="n">setRenderStages</span><span class="p">(</span><span class="n">IOSDRenderStage</span><span class="p">,</span> <span class="n">IWorldRenderStage</span><span class="p">,</span> <span class="n">IDebuggingRenderStage</span><span class="p">,</span> <span class="n">IBlittableRenderStage</span><span class="p">)</span>
+</pre></div>
+<p>Now the OSD appears behind visible objects in the scene!</p>
+<p>You can also change the implementation of a render stage by overriding the registered implementation
+and resetting the render stages on the environment:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">thirdparty</span> <span class="k">import</span> <span class="n">OSD2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">osd2</span> <span class="o">=</span> <span class="n">OSD2</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">miru.components</span> <span class="k">import</span> <span class="n">registerUtility</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">registerUtility</span><span class="p">(</span><span class="n">IOSDRenderStage</span><span class="p">,</span> <span class="n">osd2</span><span class="p">,</span> <span class="n">override</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">env</span><span class="o">.</span><span class="n">osd</span> <span class="o">=</span> <span class="n">osd2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">env</span><span class="o">.</span><span class="n">setRenderStages</span><span class="p">(</span><span class="n">IWorldRenderStage</span><span class="p">,</span> <span class="n">IOSDRenderStage</span><span class="p">)</span> <span class="c"># Reset with only 2 render stages</span>
+</pre></div>
+<p>We can also query the component providing a render stage on the environment:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">env</span><span class="o">.</span><span class="n">renderStage</span><span class="p">(</span><span class="n">IWorldRenderStage</span><span class="p">)</span>
+<span class="go">&lt;miru.camera.Camera object at 0x87b982c&gt;</span>
+</pre></div>
+<p>Declaring a render stage is also simple - just create a new interface:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">miru.imiru</span> <span class="k">import</span> <span class="n">IRenderStage</span>
+<span class="k">from</span> <span class="nn">zope.interface</span> <span class="k">import</span> <span class="n">implements</span>
+
+<span class="k">class</span> <span class="nc">IFragmentShaderStage</span><span class="p">(</span><span class="n">IRenderStage</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Render stage for GLSL fragment shader</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="k">class</span> <span class="nc">FragmentShaderStage</span><span class="p">:</span>
+    <span class="n">implements</span><span class="p">(</span><span class="n">IFragmentShaderStage</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objects</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span> <span class="c"># implement me ;)</span>
+
+    <span class="k">def</span> <span class="nf">addobj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">delobj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+</pre></div>
+<p>Now we'll register the new render stage and set the render stages on our environment
+as desired:</p>
+<div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">from</span> <span class="nn">miru.components</span> <span class="k">import</span> <span class="n">registerUtility</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">registerUtility</span><span class="p">(</span><span class="n">IFragmentShaderStage</span><span class="p">,</span> <span class="n">FragmentShaderStage</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">env</span><span class="o">.</span><span class="n">setRenderStages</span><span class="p">(</span><span class="n">IWorldRenderStage</span><span class="p">,</span> <span class="n">IFragmentShaderStage</span><span class="p">,</span> <span class="n">IOSDRenderStage</span><span class="p">)</span>
+</pre></div>
+<p>Drawable objects in miru provide an attribure <tt class="docutils literal"><span class="pre">renderStages</span></tt> which gives a list of render stage
+interfaces to which the object belongs.  This is generally defined first as a class attribute
+giving new object instances a sensible default.  <tt class="docutils literal"><span class="pre">miru.mesh.Mesh</span></tt>, for example, defines
+<tt class="docutils literal"><span class="pre">renderStages</span></tt> as <tt class="docutils literal"><span class="pre">(imiru.IWorldRenderStage,)</span></tt>.  There is a simple way to override this
+if you wish to place an object in a non-default render stage:</p>
+<div class="highlight"><pre><span class="k">from</span> <span class="nn">pyglet</span> <span class="k">import</span> <span class="n">image</span>
+<span class="k">from</span> <span class="nn">miru.mesh</span> <span class="k">import</span> <span class="n">ImageWrapper</span>
+<span class="k">from</span> <span class="nn">miru.environment</span> <span class="k">import</span> <span class="n">env</span>
+
+<span class="n">img</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s">&#39;poster.png&#39;</span><span class="p">)</span>
+<span class="n">imgw</span> <span class="o">=</span> <span class="n">newObject</span><span class="p">(</span><span class="n">ImageWrapper</span><span class="p">,</span> <span class="n">img</span><span class="p">)</span><span class="o">.</span><span class="n">inRenderStages</span><span class="p">(</span><span class="n">IWorldRenderStage</span><span class="p">)</span>
+<span class="n">env</span><span class="o">.</span><span class="n">addobj</span><span class="p">(</span><span class="n">imgw</span><span class="p">)</span>
+</pre></div>
+<p>Instances of <tt class="docutils literal"><span class="pre">ImageWrapper</span></tt> generally belong to the <tt class="docutils literal"><span class="pre">IBlittableRenderStage</span></tt> which disable depth
+testing and lighting.  In the above example we've used the <tt class="docutils literal"><span class="pre">inRenderStages</span></tt> method on <tt class="docutils literal"><span class="pre">Object</span></tt>
+to declare that the underlying <tt class="docutils literal"><span class="pre">ImageWrapper</span></tt> instance should be drawn in the <tt class="docutils literal"><span class="pre">IWorldRenderStage</span></tt> along
+with other lit objects.</p>
+<table class="docutils footnote" frame="void" id="id6" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1" name="id6">[1]</a></td><td>There is an old school - but still very legitimate -
+technique you can exploit when faced with dependencies with inflexible
+setup.py scripts - copy the various libraries to your PYTHONPATH or
+site-packages directory.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id7" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id4" name="id7">[2]</a></td><td>Actually, I lied, the nitty gritty mechanics of tracks
+assume boldly that the objects inherit from <tt class="docutils literal"><span class="pre">miru.common.PositionalMixin</span></tt>.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</body>
+</html>

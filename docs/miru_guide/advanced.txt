@@ -1,0 +1,185 @@
+Effects
+=======
+
+``miru.effects`` provides two simple effects which can be added to a scene:
+
+- ``miru.effects.Reflection``
+- ``miru.effects.Fog``
+
+
+Effects are enabled by added them to the effects list on a ``Camera`` instance.
+To enable reflection over a plane:
+
+.. code-block:: python
+
+    from miru.mesh import CheckerBoard
+    from miru import effects
+
+    cb = newObject(CheckerBoard, even_color=(0.1,0.0,0.0,0.8), odd_color=(0,0.05,0,0.8))
+    refl = effects.Reflection(ground=cb, camera=env.camera)
+
+    env.camera.effects.append(refl)
+
+
+Effects can also be combined.  The following example demostrates a Reflection effect
+following by Fog application:
+
+.. code-block:: python
+
+    fog = effects.Fog(density=0.075, color=(0.65,0.9,0.75,0.5), equation=effects.Fog.EQ_EXP)
+    cb = newObject(CheckerBoard, even_color=(0.1,0.0,0.0,0.8), odd_color=(0,0.05,0,0.8))
+    refl = effects.Reflection(ground=cb, camera=env.camera)
+    env.camera.effects.extend([refl, fog])
+
+
+
+.. figure:: effects.png
+    :alt: Reflection and Fog
+
+    Reflection and Fog are added to a scene to create the effect of objects reflecting over
+    a still body of water.
+    
+
+Scene Culling
+=============
+
+TODO
+
+.. figure:: culling.png
+    :alt: Octree
+
+    Hierarchical scene culling with an Octree data structure.
+
+Render Stages
+=============
+
+In the introduction we mentioned that Miru supports render state grouping but we haven't explained
+yet what that actually means.  We've also deferred explanation of what occurs in the ``render`` method
+on an environment.  Hopefully this section will explain to you what render stages are, and why
+they're important in any 3D application.
+
+OpenGL is a state machine, and while it can operate very quickly with modern graphics hardware, tacking
+on too much state in single render cycle can still be detrimental to performance.  A necessary optimization
+is to sort objects drawn in a scene by their state based on enabled attributes: depth testing, lighting,
+etc.  Enabling and disabling such attributes per object rendered is unacceptable.
+
+The interface `miru.imiru.IRenderStage` specifies a grouping of objects which should all be rendered 
+in the same driver state.  For example, when drawing 3D meshes in a scene, certain key attributes should
+be applied for each object:
+
+- The Polygon mode must be set according to the desired effect (filled quads and triangles or outlines only)
+- Lighting should be enabled
+- To avoid the complications of manual z-buffer sorting, depth testing should be enabled
+
+On the other hand, we might want to draw debugging objects as well in the 3D scene with an entirely
+different set of required attributes.  Mixing such objects together with the former in an arbitrary
+order means we'll have to enable/disable attributes many more times than we need to - that is,
+optimially once per attribute per frame.
+
+By default, the Environment object is initialized with 4 rendering stages in the following order:
+
+- ``miru.imiru.IWorldRenderStage`` (default implementation: ``miru.camera.Camera``)
+- ``miru.imiru.IDebuggingRenderStage`` (default implementation: ``miru.camera.DebugView``)
+- ``miru.imiru.IBlittableRenderStage`` (default implementation: ``miru.camera.BlittableView``)
+- ``miru.imiru.IOSDRenderStage`` (default implementation: ``miru.osd.OSD``) 
+
+
+.. figure:: render-stages.png
+    :alt: A scene demonstrating 4 render stages
+
+    All four render stages together in harmony.
+
+You are able, however, to set the order as you please, as well as declare (via an interface)
+and implement new rendering stages to plug into the pipeline.  Or, you can
+override previously declared interfaces with a new implementation.  First, let's see how to
+reorder the render stage pipeline:
+
+.. code-block:: pycon
+
+    >>> from miru.imiru import *
+    >>> from miru.environment import env
+    >>> env.setRenderStages(IOSDRenderStage, IWorldRenderStage, IDebuggingRenderStage, IBlittableRenderStage)
+   
+Now the OSD appears behind visible objects in the scene!
+
+You can also change the implementation of a render stage by overriding the registered implementation
+and resetting the render stages on the environment:
+
+.. code-block:: pycon
+
+    >>> from thirdparty import OSD2
+    >>> osd2 = OSD2()
+    >>> from miru.components import registerUtility
+    >>> registerUtility(IOSDRenderStage, osd2, override=True)
+    >>> env.osd = osd2
+    >>> env.setRenderStages(IWorldRenderStage, IOSDRenderStage) # Reset with only 2 render stages
+
+We can also query the component providing a render stage on the environment:
+
+.. code-block:: pycon
+
+    >>> env.renderStage(IWorldRenderStage)
+    <miru.camera.Camera object at 0x87b982c>
+
+Declaring a render stage is also simple - just create a new interface:
+
+.. code-block:: python
+
+    from miru.imiru import IRenderStage
+    from zope.interface import implements
+
+    class IFragmentShaderStage(IRenderStage):
+        """Render stage for GLSL fragment shader
+        """
+
+    class FragmentShaderStage:
+        implements(IFragmentShaderStage)
+        
+        def __init__(self):
+            self.objects = []
+
+        def render(self):
+            pass # implement me ;)            
+
+        def addobj(self, obj):
+            self.objects.append(obj)
+
+        def delobj(self, obj):
+            self.objects.remove(obj)
+
+
+Now we'll register the new render stage and set the render stages on our environment
+as desired:
+
+.. code-block:: pycon
+
+    >>> from miru.components import registerUtility
+    >>> registerUtility(IFragmentShaderStage, FragmentShaderStage())
+    >>> env.setRenderStages(IWorldRenderStage, IFragmentShaderStage, IOSDRenderStage)
+ 
+
+Drawable objects in miru provide an attribure ``renderStages`` which gives a list of render stage
+interfaces to which the object belongs.  This is generally defined first as a class attribute
+giving new object instances a sensible default.  ``miru.mesh.Mesh``, for example, defines
+``renderStages`` as ``(imiru.IWorldRenderStage,)``.  There is a simple way to override this
+if you wish to place an object in a non-default render stage:
+
+.. code-block:: python
+
+    from pyglet import image
+    from miru.mesh import ImageWrapper
+    from miru.environment import env
+
+    img = image.load('poster.png')
+    imgw = newObject(ImageWrapper, img).inRenderStages(IWorldRenderStage)
+    env.addobj(imgw)
+
+
+Instances of ``ImageWrapper`` generally belong to the ``IBlittableRenderStage`` which disable depth
+testing and lighting.  In the above example we've used the ``inRenderStages`` method on ``Object``
+to declare that the underlying ``ImageWrapper`` instance should be drawn in the ``IWorldRenderStage`` along
+with other lit objects. 
+
+
+
+

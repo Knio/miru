@@ -1,0 +1,151 @@
+Objects and Drawables
+---------------------
+
+.. contents::
+    :local:
+
+newObject
+~~~~~~~~~
+
+An instance of ``miru.mesh.Object`` is simply a positional placeholder for an drawable object.
+To ``newObject`` function should be used when creating and object to be added to
+the global environment.  Example:
+
+.. code-block:: python
+
+    from miru.mesh import newObject, Sphere
+    
+    sphere = newObject(Sphere, radius=0.5)
+    env.addobj(sphere)
+
+newObject takes a class followed by positional and keyword arguments to pass to the
+``__init__`` method of the class.  It returns an instance of Object wrapping the 
+underlying drawable object.  
+
+.. NOTE::
+
+    There are many reasons for using a wrapper rather than
+    the underyling object directly with postional attributes inherited from a
+    super class. For one, we can have serveral distinct objects with different 
+    positions and orientations reference a single drawable object.  Most 
+    importantly, a drawable object may consume a fair amount of space with vertex and normal
+    data, so having a container to reference it provides a convenient memory
+    optimization.  
+
+To move the sphere we created along the y-axis by Y:
+
+.. code-block:: python
+
+    sphere.pos += (0,Y,0)
+
+To rotate the sphere along it's Z-axis by Z:
+
+.. code-block:: python
+
+    sphere.angle += (0,0,Z)
+
+
+.. NOTE::
+
+   The orientation of an object is indeed just an Euler.  This is problematic for advanced
+   transformations and interpolation of poses, so Miru will likely expose more
+   flexible matrix or quaternion representations in a future version.  For now,
+   you'll have to suffer the badness of the Euler representation or write your own 
+   transformation functions on top of Miru.
+
+To remove the sphere from the environment:
+
+.. code-block:: python
+
+    env.delobj(sphere)
+    
+
+Drawables
+~~~~~~~~~
+
+Instances of ``Object`` have an attribute ``drawable`` which provides a reference 
+to the underlying drawing primitive (several of which, including ``Mesh``) are
+defined in the mesh module.  The ``loadObj`` function referred to in the Quick Start
+section merely wraps a new ``Mesh`` in an instance of ``Object``:
+
+.. code-block:: python
+
+    def loadObj(filename, flip_normals=False, interleave=True):
+        from miru.tools import obj
+        mesh = _loaded_meshes.get(filename)
+        if mesh is not None:
+            return Object(mesh)
+        parser = obj.ObjParser(filename, flip_normals=flip_normals)
+        f,d,data = parser.parse()
+        mesh = obj2mesh(f, data, interleave=interleave)
+        _loaded_meshes[filename] = mesh
+        return Object(mesh)
+
+
+Let's  examine an ``Object`` instance to see how it wraps the underlying primitive:
+
+.. code-block:: pycon
+
+    >>> o = newObject(Sphere, radius=2)
+    >>> o
+    <miru.mesh.Object at 89d254c <miru.mesh.Sphere object at 0xb789da6c>>
+    >>> o.drawable
+    <miru.mesh.Sphere object at 0xb789da6c>
+    >>> from miru.imiru import IWorldObject # Adapting to IWorldObject provider
+    >>> IWorldObject(o) == o.drawable
+    True
+
+The ``IWorldObject`` interface is simply a stub interface for marking objects as
+appropriate for rendering in a 3D context.  Implementations include ``miru.mesh.Sphere``,
+``miru.mesh.Mesh`` and ``miru.mesh.ImageWrapper``.
+
+
+Groups
+~~~~~~
+
+Objects can also be grouped together by via an instance of ``miru.mesh.Group``.  
+The initializer for a group takes a list of objects:
+
+.. code-block:: python
+    
+    from miru.mesh import Group, Sphere, newObject
+    s1 = newObject(Sphere)
+    s2 = newObject(Sphere)
+    s2.pos = (1,0,0)
+    s3 = newObject(Sphere)
+    s3.pos = (2,0,0)
+    group = Group(s1,s2,s3)
+    env.addobj(group)
+
+Note that ``Group`` is a sublclass of ``Object``.  A group can also be `compiled`, meaning 
+the underlying objects are drawn once as part of a display list:
+
+.. code-block:: python
+
+    group = Group(s1,s2,s3,compile=True)
+    env.addobj(group)
+
+Be careful when using the compile flag, since one or more of grouped objects' 
+draw method may invoke call a display list itself via ``glCallList`` - and nesting
+display lists is an invalid operation.  For grouping ``Mesh`` instances (which by default 
+use a display list on draw), you can first create the meshes with compilation turned
+off.  For example:
+
+.. code-block:: python
+
+    head = loadObj('head.obj', compile=False)
+    hat = loadObj('hat.obj', compile=False)
+    group = Group(head, hat, compile=True)
+    env.addobj(group)
+
+.. CAUTION::
+    
+    You should never compile a group if the objects making
+    up the group change position relative to the root position at runtime.
+    In other words, those objects will **not** get redrawn, of course,
+    to reflect their new positions.
+
+
+
+
+

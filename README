@@ -1,0 +1,15 @@
+Currently Miru does not have any external documents.
+Example application can be found in examples directory.
+
+See DEPENDS for a list of dependecies used by Miru.
+
+To run examples as user acceptance tests:
+
+   python examples/runftests.py
+
+Use trial to run unit tests (including results gathered
+from user acceptance tests):
+
+   trial miru
+
+

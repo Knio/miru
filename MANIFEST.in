@@ -1,0 +1,8 @@
+include DEPENDS
+include LICENSE
+include setup.py
+include euclid.py
+exclude MANIFEST.in
+recursive-include examples *py
+recursive-include miru/test *.obj *.mtl
+recursive-include docs/demo *.obj *.mtl *.jpg *.png

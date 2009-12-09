@@ -1,0 +1,7 @@
+Miru depends on:
+
+* pyglet (http://code.google.com/p/pyglet/)
+* pyeuclid (http://code.google.com/p/pyeuclid/)
+* twisted (http://twistedmatrix.com/trac/)
+* zope.interface (http://www.zope.org/Products/ZopeInterface)
+

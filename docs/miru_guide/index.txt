@@ -1,0 +1,49 @@
+.. sectnum::
+
+====================
+Introduction to Miru
+====================
+
+Miru provides camera, lighting, render state grouping and various
+other abstractions which facilitate the task of rendering
+objects in an OpenGL context.  It is tightly integrated with first pyglet
+(more specifically ``pyglet.window``, ``pyglet.gl`` and ``pyglet.font`` modules),
+which provides a portable (Linux, Mac OSX, and Windows) and raw interface to the OpenGL
+GL and GLU libraries via ``ctypes``, secondly zope.interface which provides the building
+blocks for a component architecture that make several features of the 
+library easy to implement, and lastly Twisted, which, via 
+``twisted.python.components``, provides a component registry on top of
+zope.interface.
+
+Miru might be useful if you are daunted by OpenGL and want to write a 3D
+application.  I am almost 68.73% confident that there is a 2 out of 3 chance that
+Miru will help you in a small (but core) subset of relevant
+tasks without requiring more than a beginner's understading of OpenGL.  
+
+
+**NB 1:**: Miru is *pre-alpha*.  I will make no promises on its stability.
+Use at your own risk.  If you find any bugs, I'd like to know - and patches
+are ideal of course if it is a real bug versus a feature you haven't appreciated
+yet.  You can email me directly or communicate over the pyglet mailing list - 
+Miru is essentially a pyglet application.
+
+**NB 2:** Miru is implemented in the Python programming language and
+is intended for use in Python-based applications.
+
+
+.. contents::
+
+.. include:: installation.txt
+.. include:: quick-start.txt
+.. include:: modules.txt
+
+
+
+.. [#] There is an old school - but still very legitimate - 
+    technique you can exploit when faced with dependencies with inflexible 
+    setup.py scripts - copy the various libraries to your PYTHONPATH or 
+    site-packages directory.
+
+.. [#] Actually, I lied, the nitty gritty mechanics of tracks
+    assume boldly that the objects inherit from ``miru.common.PositionalMixin``.
+

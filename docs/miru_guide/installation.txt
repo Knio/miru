@@ -1,0 +1,33 @@
+Installation
+============
+
+You can grab the current distribution of Miru here:
+
+    **Miru 0.0.2** http://miru.enterthefoo.com/releases/Miru-0.0.2.tar.gz
+
+
+You can grab the latest sources from the mercurial repository as well:
+
+   ``hg clone http://hg.enterthefoo.com/Miru Miru``
+
+There is also a dependency-bundled version of Miru (including Twisted, 
+zope.interface and pyeuclid) which will allow you to play around 
+with Miru to see the gruel I've generated and decide for yourself if it's
+even worth bothering with before properly installing the dependencies:
+
+    **Miru 0.0.2 (w/ deps)** http://miru.enterthefoo.com/releases/Miru-bundled-0.0.2.tar.gz
+
+If you want to install globally to your python installation,
+do the usual thing:
+
+::
+
+    $ python setup.py install
+
+A side note: Anything "C" in either Twisted or zope.interface
+is strictly an optional C optimization - and trust me, you don't really
+need these C optimizations for Miru. Distutils and setuptools may trick
+you into beliveing that you have to *build* zope.interface and Twisted
+This simply isn't true. [#]_
+
+

@@ -1,0 +1,98 @@
+Quick Start
+===========
+
+The following demonstrates a minimal miru application:
+
+.. code-block:: python
+
+    from miru.ui import TestWindow
+    from miru.environment import env
+
+    w = TestWindow(680,400)
+    env.window = w
+
+    while True:
+        w.clear()
+        w.dispatch_events()
+        env.render()
+        w.flip()
+
+
+Firing up this example you will see ... a black screen!  Congratulations!  
+Okay, so that isn't very much fun.  Let's make a window with a mesh loaded 
+from an external .OBJ file by adding the following lines to the above
+program:
+
+.. code-block:: python
+
+    from miru.mesh import loadObj
+    import os
+
+    o = loadObj(os.path.join('docs', 'demo', 'alien.obj'))
+    env.addobj(o)
+
+
+And finally we can also turn on our interactive python interpretter
+using the toggle_console function from miru.editor:
+
+.. code-block:: python
+
+    from miru.editor import toggle_console
+    toggle_console()
+
+TestWindow also will give you a default key-binding ``CTL-T``
+(which will allow to turn 
+the on-screen display console on and off).  In most applications, you should
+create your own window implementation (which generally should be a subclass
+or ``miru.ui.BaseWindow``) with your desired global key bindings. For example:
+
+.. code-block:: python
+
+    class MyWindow(miru.ui.BaseWindow):
+        def on_key_press(self, key, modifiers):
+            ...
+
+Note that the interactive interpretter is great tool for learning Miru and
+pyglet.  It allows you to directly manipulate the environment and see 
+the effects. 
+
+Finally, here is a completed example - "Hello World":
+
+.. code-block:: python
+
+    
+    from miru.ui import TestWindow
+    from miru.environment import env
+    from miru.mesh import loadObj
+    from miru.editor import toggle_console
+    import os
+
+
+    w = TestWindow(680,400)
+    env.window = w
+
+    # Load mesh from external Wavefront OBJ file
+    o = loadObj(os.path.join('docs', 'demo', 'alien.obj'))
+    env.addobj(o)
+
+    # Turn the console on
+    toggle_console()
+
+    while True:
+        w.clear()
+        w.dispatch_events()
+        env.render()
+        w.flip()
+
+
+
+.. figure:: quickstart-screen.png
+    :alt: Python console
+    
+    A scene rendered with a "usable" Python console in the display
+
+Remember ``CTL-T`` can be used to turn the console on and off.  Also, a mouse
+handler is enabled by default which will enable you to click on the trapezoidal
+object and move it around.  Gee, that was ... fun.
+
+

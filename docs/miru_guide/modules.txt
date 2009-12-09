@@ -1,0 +1,474 @@
+Interfaces
+==========
+
+The module ``miru.imiru`` contains all the interfaces used by miru.  An explanation
+of what interfaces do is outside the scope of this document, but briefly, an 
+interface documents the expected behavior of a component separately from the implementation.
+Since interfaces are actually code, they can also be used to verify implementation
+correctness in unit tests, and adapt arbiraty objects to an interface at runtime.
+Many classes in ``miru`` implement interfaces imported from 
+``miru.imiru``, and in those instances you should peruse the documentation - 
+if it exists ;) - on the
+interface as opposed to the concrete implementation.  For example,
+``miru.environment.Environment`` implements ``imiru.IEnvironment``:
+
+.. code-block:: python 
+    
+    class IEnvironment(Interface):
+        window = Attribute("""
+            The current window (C{pyglet.window.Window})""")
+
+        objects = Attribute("""
+            C{list} of objects in the world (current scene)""")
+
+        osd = Attribute("""
+            (Optional) On Screen Display (miru.osd.OSD)""")
+
+        cameras = Attribute("""
+            Map of cameras set up for the scene.  If not explicitly set,
+            the current camera is assigned the key `main'""")
+
+        camera = Attribute("""
+            The current camera used for rendering the scene""")
+
+        handle = Attribute("""
+            (Optional) Mouse handler for selecting objects""")
+
+        def renderStage(iface):
+            """Get the C{IRenderStage} provider for the given Interface.
+
+            @param iface: The C{IRenderStage} Interface we are looking for
+            """
+        
+        def setRenderStages(*ifaces):
+            """Set render stages for the environment.  The interfaces supplied must
+            first have a provider utility registered with
+            C{miru.components.registerUtility} before calling this method.
+
+            @param iface: Listing of C{IRenderStage} Interfaces.
+            """
+        
+        def render():
+            """Render the evironment - invoking its render stages in the order added.
+            """
+        
+        def addobj(obj):
+            """Add an object to the environment.
+            """
+        
+        def delobj(obj):
+            """Remove an object from the environment.
+            """
+
+
+
+The Environment Singleton
+=========================
+
+*Behold, the singleton anti-pattern! --Also Sproch Zarahustra*
+
+The environment class provides a global singleton which can be used to reference
+many objects that often need to be queried on a global level.  Exposed attributes
+are documented in ``IEnvironment`` and include:
+
+- window: The pyglet.window.Window created for the application
+- objects: Objects added to the world
+- handle: Mouse or generic device handle
+- camera: The current camera used for rendering the 3d scene
+
+The env object also provides a simple interface for adding and removing objects.
+To add an object:
+
+.. code-block:: python
+
+    from miru.environment import env
+    env.addobj(obj)
+
+To remove and object:
+
+.. code-block:: python
+
+    env.delobj(obj)
+
+
+.. include:: objects.txt
+
+
+
+Cameras and Lights
+==================
+
+.. contents::
+    :local:
+
+Basics
+------
+
+Camera and Lighting abstractions can be found in the module ``miru.camera``.
+Creating a camera:
+
+.. code-block:: python
+
+    from miru.camera import Camera
+    camera = Camera(pos=(1,4,5), wireframe=True)
+    env.cameras['secondary'] = camera
+
+The above code creates a camera positoned at XYZ coordinates (1,4,5) and with wireframe
+rendering turned on.  To set the main camera to the secondary camera we defined above:
+
+.. code-block:: python
+
+    camera.objects = env.camera.objects # link visible objects between cameras
+    env.camera = env.cameras['secondary']
+
+
+We won't be able to see anything in our scene, however, since we haven't declared any lights
+for our camera. Let's fix this:
+
+.. code-block:: python
+
+    from miru.camera import LightGroup, PositionalLight
+    lights = LightGroup([PositionalLight(), PositionalLight((2,3,4))])
+    env.camera.lights = lights
+
+
+Camera Controls
+---------------
+
+An interesting feature of ``miru.camera.Camera`` is the ability to follow objects - similar
+to stationary camera on a rotational pivot.
+
+.. code-block:: python
+    
+    raceCar = loadObj('racecar.obj')
+    env.camera.track_target = raceCar
+
+To disable, simply set ``track_target`` to ``None``:
+
+.. code-block:: python
+
+    env.camera.track_target = None
+
+The camera's angle can also be interpretted as either a rotation (or orbit) around 
+the origin, or a rotation around the local axis.  Support for orbiting around a
+specified point is a planned feature.
+
+To set the rotational mode of the camera to orbit (default):
+
+.. code-block:: python
+
+    env.camera.rotation_mode = Camera.ORBIT_MODE
+
+To set the rotational mode of the camera to local axis based:
+
+.. code-block:: python
+
+    env.camera.rotation_mode = Camera.ROTATION_MODE
+
+
+Lighting
+--------
+
+The are two classes of lights currently supported by Miru: 
+
+- ``miru.camera.DirectionalLight``
+- ``miru.camera.PositionalLight``
+
+A directional light acts as a light placed at an inifite distance from the visible object,
+providing ambient light with a constant from it's origin.   A positional light behaves similar
+to a spot light.
+
+.. figure:: lights.png
+    :alt: Positional Lights with debugging enabled
+
+    Debugging enabled on positional lights placed in a scene
+
+
+A positional light with a spot cutoff in the range [0,90] will have a cone-shaped light
+with an angle given by the cutoff value:
+
+.. code-block:: python
+    
+    spotlight = camera.PositionalLight(pos=(0,2,0), spot_cutoff=25,
+        spot_exponent=10, kq=0.1)
+    env.camera.lights.append(spotlight)
+
+        
+You can enable debugging on a positional light to see it's location in the scene.
+
+.. code-block:: pycon
+
+    >>> pl = env.camera.lights[0] # assuming the first light is a positional light
+    >>> pl.debug = 1
+
+Projections
+-----------
+
+By default, a camera has a perspective projection - objects in the distance appear
+smaller than objects closer to the camera's position.  The projection can be set on
+on a camera with either a perspective projection (``miru.camera.PerspectiveProjection``)
+or an orthographic projection (``miru.camera.OrthographicProjection``).
+
+.. code-block:: python
+
+    from miru import camera
+    orthoproj = camera.OrthographicProjection()
+    env.camera.projection = orthoproj
+
+Viewports (Experimental)
+------------------------
+
+By default, a projection gives you a viewport with its lower left corner positioned
+at the bottom left of the window and spanning the width and height of the window.
+Miru provides some experimental support for enabling multiple viewports in a single window.
+The class ``miru.camera.Viewport`` is a special type of projection which wraps a target projection
+(by default ``miru.camera.PerspectiveProjection``) and contains some viewport information -
+the bottom left (``bl``) and the top right (``tr``) corners of the viewport.  Both ``bl`` and ``tr``
+are 2-tuples giving the corresponding `(x, y)`  coordinates; their values should be in the range
+`[0,1]` and abide by the constraints `tr[0] > bl[0]` and `tr[1] > bl[1]`.
+
+Setting a single viewport on a single camera isn't very interesting.  We want to combine
+multiple camera views on one windoe.  The class ``miru.camera.MetaCamera`` allows
+us to do just this by specifying the combination of cameras and viewports to use.  The following
+example shows how to divide a screen into quadrants - each rendering a different projection
+on the scene:
+
+.. code-block:: python
+
+    lights = camera.LightGroup([
+                camera.PositionalLight(), camera.DirectionalLight()])
+
+    cam1 = camera.Camera(pos=(0,1,4), angle=(15,0,0), lights=lights,
+            projection=camera.Viewport((0.0,0.5),(0.5,1.0)))
+    cam2 = camera.Camera(pos=(0,2,8), angle=(45,180,0), lights=lights,
+            projection=camera.Viewport((0.5,0.5),(1.0,1.0)))
+    cam3 = camera.Camera(pos=(0,1,7), angle=(90,0,0), lights=lights,
+            projection=camera.Viewport((0.0,0.0),(0.5,0.5)))
+    cam4 = camera.Camera(pos=(0,1,5), angle=(0,50,0), lights=lights,
+            projection=camera.Viewport((0.5,0.0),(1.0,0.5)))
+
+    env.camera = camera.MetaCamera(cam1, cam2, cam3, cam4)
+    # Link the objects
+    cam4.objects = cam3.objects = cam2.objects = cam1.objects
+    # Turn debugging on to draw set an outline around each viewport
+    env.camera.debug = True
+
+
+.. figure:: viewports.png
+    :alt: A single window divided into quadrants
+
+    A single window divided into quadrants
+
+To set the context projection on a viewport:
+
+.. code-block:: pycon
+
+    >>> from miru import camera
+    >>> viewport = camera.Viewport((0.,0.),(0.5,0.5), camera.OrthographicProjection())
+
+
+.. include:: tracks.txt
+
+The On Screen Display (OSD)
+===========================
+
+``miru.osd`` provides an OSD class will renders (by default) after objects in the 
+3D world are rendered.  Objects which need to be rendered on screen and not affected
+by world transformations or lighting can be added to the OSD.  For example, we can take an FPS
+display provided by pyglet and place this in the OSD:
+
+.. code-block:: python
+
+    from pyglet import clock
+    from pyglet import font
+    clock_display = clock.ClockDisplay(font=font.load('',18), color=(0.,1.,0.,0.5))
+    env.osd.addobj(clock_display)
+
+The Python interactive console mentioned above is also rendered in the OSD layer.
+
+
+Effects
+=======
+
+``miru.effects`` provides two simple effects which can be added to a scene:
+
+- ``miru.effects.Reflection``
+- ``miru.effects.Fog``
+
+
+Effects are enabled by added them to the effects list on a ``Camera`` instance.
+To enable reflection over a plane:
+
+.. code-block:: python
+
+    from miru.mesh import CheckerBoard
+    from miru import effects
+
+    cb = newObject(CheckerBoard, even_color=(0.1,0.0,0.0,0.8), odd_color=(0,0.05,0,0.8))
+    refl = effects.Reflection(ground=cb, camera=env.camera)
+
+    env.camera.effects.append(refl)
+
+
+Effects can also be combined.  The following example demostrates a Reflection effect
+following by Fog application:
+
+.. code-block:: python
+
+    fog = effects.Fog(density=0.075, color=(0.65,0.9,0.75,0.5), equation=effects.Fog.EQ_EXP)
+    cb = newObject(CheckerBoard, even_color=(0.1,0.0,0.0,0.8), odd_color=(0,0.05,0,0.8))
+    refl = effects.Reflection(ground=cb, camera=env.camera)
+    env.camera.effects.extend([refl, fog])
+
+
+
+.. figure:: effects.png
+    :alt: Reflection and Fog
+
+    Reflection and Fog are added to a scene to create the effect of objects reflecting over
+    a still body of water.
+    
+
+Scene Culling
+=============
+
+TODO
+
+.. figure:: culling.png
+    :alt: Octree
+
+    Hierarchical scene culling with an Octree data structure.
+
+Render Stages
+=============
+
+In the introduction we mentioned that Miru supports render state grouping but we haven't explained
+yet what that actually means.  We've also deferred explanation of what occurs in the ``render`` method
+on an environment.  Hopefully this section will explain to you what render stages are, and why
+they're important in any 3D application.
+
+OpenGL is a state machine, and while it can operate very quickly with modern graphics hardware, tacking
+on too much state in single render cycle can still be detrimental to performance.  A necessary optimization
+is to sort objects drawn in a scene by their state based on enabled attributes: depth testing, lighting,
+etc.  Enabling and disabling such attributes per object rendered is unacceptable.
+
+The interface `miru.imiru.IRenderStage` specifies a grouping of objects which should all be rendered 
+in the same driver state.  For example, when drawing 3D meshes in a scene, certain key attributes should
+be applied for each object:
+
+- The Polygon mode must be set according to the desired effect (filled quads and triangles or outlines only)
+- Lighting should be enabled
+- To avoid the complications of manual z-buffer sorting, depth testing should be enabled
+
+On the other hand, we might want to draw debugging objects as well in the 3D scene with an entirely
+different set of required attributes.  Mixing such objects together with the former in an arbitrary
+order means we'll have to enable/disable attributes many more times than we need to - that is,
+optimially once per attribute per frame.
+
+By default, the Environment object is initialized with 4 rendering stages in the following order:
+
+- ``miru.imiru.IWorldRenderStage`` (default implementation: ``miru.camera.Camera``)
+- ``miru.imiru.IDebuggingRenderStage`` (default implementation: ``miru.camera.DebugView``)
+- ``miru.imiru.IBlittableRenderStage`` (default implementation: ``miru.camera.BlittableView``)
+- ``miru.imiru.IOSDRenderStage`` (default implementation: ``miru.osd.OSD``) 
+
+
+.. figure:: render-stages.png
+    :alt: A scene demonstrating 4 render stages
+
+    All four render stages together in harmony.
+
+You are able, however, to set the order as you please, as well as declare (via an interface)
+and implement new rendering stages to plug into the pipeline.  Or, you can
+override previously declared interfaces with a new implementation.  First, let's see how to
+reorder the render stage pipeline:
+
+.. code-block:: pycon
+
+    >>> from miru.imiru import *
+    >>> from miru.environment import env
+    >>> env.setRenderStages(IOSDRenderStage, IWorldRenderStage, IDebuggingRenderStage, IBlittableRenderStage)
+   
+Now the OSD appears behind visible objects in the scene!
+
+You can also change the implementation of a render stage by overriding the registered implementation
+and resetting the render stages on the environment:
+
+.. code-block:: pycon
+
+    >>> from thirdparty import OSD2
+    >>> osd2 = OSD2()
+    >>> from miru.components import registerUtility
+    >>> registerUtility(IOSDRenderStage, osd2, override=True)
+    >>> env.osd = osd2
+    >>> env.setRenderStages(IWorldRenderStage, IOSDRenderStage) # Reset with only 2 render stages
+
+We can also query the component providing a render stage on the environment:
+
+.. code-block:: pycon
+
+    >>> env.renderStage(IWorldRenderStage)
+    <miru.camera.Camera object at 0x87b982c>
+
+Declaring a render stage is also simple - just create a new interface:
+
+.. code-block:: python
+
+    from miru.imiru import IRenderStage
+    from zope.interface import implements
+
+    class IFragmentShaderStage(IRenderStage):
+        """Render stage for GLSL fragment shader
+        """
+
+    class FragmentShaderStage:
+        implements(IFragmentShaderStage)
+        
+        def __init__(self):
+            self.objects = []
+
+        def render(self):
+            pass # implement me ;)            
+
+        def addobj(self, obj):
+            self.objects.append(obj)
+
+        def delobj(self, obj):
+            self.objects.remove(obj)
+
+
+Now we'll register the new render stage and set the render stages on our environment
+as desired:
+
+.. code-block:: pycon
+
+    >>> from miru.components import registerUtility
+    >>> registerUtility(IFragmentShaderStage, FragmentShaderStage())
+    >>> env.setRenderStages(IWorldRenderStage, IFragmentShaderStage, IOSDRenderStage)
+ 
+
+Drawable objects in miru provide an attribure ``renderStages`` which gives a list of render stage
+interfaces to which the object belongs.  This is generally defined first as a class attribute
+giving new object instances a sensible default.  ``miru.mesh.Mesh``, for example, defines
+``renderStages`` as ``(imiru.IWorldRenderStage,)``.  There is a simple way to override this
+if you wish to place an object in a non-default render stage:
+
+.. code-block:: python
+
+    from pyglet import image
+    from miru.mesh import ImageWrapper
+    from miru.environment import env
+
+    img = image.load('poster.png')
+    imgw = newObject(ImageWrapper, img).inRenderStages(IWorldRenderStage)
+    env.addobj(imgw)
+
+
+Instances of ``ImageWrapper`` generally belong to the ``IBlittableRenderStage`` which disable depth
+testing and lighting.  In the above example we've used the ``inRenderStages`` method on ``Object``
+to declare that the underlying ``ImageWrapper`` instance should be drawn in the ``IWorldRenderStage`` along
+with other lit objects. 
+
+
+
+
