@@ -13,22 +13,25 @@ Features of the specification that are not well tested:
 TODO
 """
 
-from euclid import Vector3
 from warnings import warn
 try:
     from cStringIO import StringIO
 except:
     from StringIO import StringIO
 import os
-from twisted.python import failure
-
-from twisted.python import failure
-
 
 class ObjObject(object):
 
-    __slots__ = ['vertices', 'normals', 'material',
-            'vertex_indices', 'normal_indices', 'texcoords', 'texcoord_indices']
+    __slots__ = [
+        'vertices', 
+        'normals', 
+        'material',
+        'vertex_indices',
+        'normal_indices', 
+        'texcoords', 
+        'texcoord_indices',
+        'faces',
+    ]
 
     def __init__(self, ctx=None):
         self.vertices = []
@@ -38,6 +41,7 @@ class ObjObject(object):
         self.vertex_indices = []
         self.normal_indices = []
         self.texcoord_indices = []
+        self.faces = []
         # Vertices are global and shared in an OBJ file despite
         # the ordering an layout.
         if ctx:
@@ -46,13 +50,26 @@ class ObjObject(object):
             self.normals = ctx.normals
 
 class ObjFace(object):
-
+    __slots__ = [
+        'size',
+        'material',
+        'vertices',
+        'textures',
+        'normals',
+    ]
     def __init__(self):
         pass
 
 class ObjMaterial(object):
 
-    __slots__ = ['ambient', 'diffuse', 'specular', 'alpha', 'shininess', 'teximg_filename']
+    __slots__ = [
+        'ambient', 
+        'diffuse', 
+        'specular', 
+        'alpha', 
+        'shininess', 
+        'teximg_filename'
+    ]
 
     def __init__(self):
         self.ambient = None
@@ -100,25 +117,26 @@ class ObjParser:
         it = i_()
         for (idx,line) in ((it.next(),l) for l in fh):
             data.write(line)
-            if not line[:-1]:
+            if not line.strip():
                 continue
-            if line[0] == '#':
+            if line.strip()[0] == '#':
                 continue
             tks = line.split()
             directive = tks[0]
             try:
                 h = getattr(self, '_handle_%s' % directive)
-                try:
-                    h(tks[1:])
-                except Exception, e:
-                    pass
-            except AttributeError:
-                f = failure.Failure()
-                f.printTraceback()
-                #warn("Directive %s not handled" % directive)
-
+                h(tks[1:])
+            except Exception, e:
+                print "Error parsing line %d:" % idx
+                print line
+                raise
+            
         close(fh)
         return (self.first, self.objects, data.getvalue())
+
+    def _handle_g(self, tks):
+        #self.current.groups = tks
+        pass
 
     def _handle_o(self, tks):
         # New object definition
@@ -131,23 +149,18 @@ class ObjParser:
         # Vertex
         if not self.current:
             self.current = ObjObject()
-            if not self.first:
-                self.first = self.current
-        self.current.vertices.append(tuple([float(t) for t in tks]))
+            self.first = self.first or self.current
+        self.current.vertices.append(tuple(map(float, tks)))
 
     def _handle_vn(self, tks):
         # Vertex Normal
-        v = Vector3(*tuple([float(t) for t in tks]))
-        v.normalize()
-        # XXX it seems smoothly shaded meshes need this (at least as exported from blender)
+        x,y,z = tuple([float(t) for t in tks])
         if self.flip_normals:
-            v *= -1
-        self.current.normals.append((v.x, v.y, v.z))
+            x, y, z = -x, -y, -z
+        self.current.normals.append((x, y, z))
 
     def _handle_vt(self, tks):
-        # XXX we assume the last number is 0.0 and we're always dealing with
-        # 2D texture coords
-        coords = tuple([float(n) for n in tks[:-1]])
+        coords = tuple(map(float, tks))
         self.current.texcoords.append(coords)
 
     def _handle_s(self, tks):
@@ -164,36 +177,38 @@ class ObjParser:
         try:
             self.current.material = self.mat = self.materials[tks[0]]
         except KeyError:
-            #warn('Failed looking up material : %s' % tks[0])
-            pass
-
-    def _handle_f(self, tks):
+            print 'Warning: material %s not found' % tks[0]
+        
+    def _handle_f(self, face):
         # parse the face
-        face = tks
-        try:
-            face[0].index('//')
-            delim = '//'
-        except:
-            delim = '/'
-        tidxs = []
         vidxs = []
+        tidxs = []
         nidxs = []
-        if delim == '//':
-            # double slashes used when no texture indices are given
-            for indices in face:
-                vidx, nidx = indices.split(delim)
-                vidxs.append(int(vidx)-1)
-                nidxs.append(int(nidx)-1)
-        else:
-            for indices in face:
-                vidx, tidx, nidx = indices.split(delim)
-                vidxs.append(int(vidx)-1)
-                nidxs.append(int(nidx)-1)
-                tidxs.append(int(tidx)-1)
-        if tidxs:
-            self.current.texcoord_indices.append(tuple(tidxs))
-        self.current.vertex_indices.append(tuple(vidxs))
-        self.current.normal_indices.append(tuple(nidxs))
+        
+        for indices in face:
+            tk = indices.split('/')
+            v = int(tk[0])
+            t = len(tk) >= 2 and tk[1] and int(tk[1]) or 0
+            n = len(tk) >= 3 and tk[1] and int(tk[1]) or 0
+            if v < 0: v = len(self.current.vertices)  + v + 1
+            if t < 0: t = len(self.current.texcoords) + t + 1
+            if n < 0: n = len(self.current.normals)   + n + 1
+            vidxs.append(v)
+            tidxs.append(t)
+            nidxs.append(n)
+        
+        face = ObjFace()
+        face.size = len(vidxs)
+        face.vertices = tuple(self.current.vertices [i-1] for i in vidxs)
+        face.textures = tuple(i and self.current.texcoords[i-1] or None for i in tidxs)
+        face.normals  = tuple(i and self.current.normals  [i-1] or None for i in nidxs)
+        face.material = self.current.material
+        
+        self.current.faces.append(face)
+        
+        self.current.vertex_indices.  append(tuple(vidxs))
+        self.current.texcoord_indices.append(tuple(tidxs))
+        self.current.normal_indices.  append(tuple(nidxs))
 
 
 class ObjMaterialParser:
@@ -209,9 +224,9 @@ class ObjMaterialParser:
         self.material = None
 
         for line in fh:
-            if not line[:-1]:
+            if not line.strip():
                 continue
-            if line[0] == '#':
+            if line.strip()[0] == '#':
                 continue
             tks = line.split()
             directive = tks[0]
